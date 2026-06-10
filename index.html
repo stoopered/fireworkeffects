@@ -156,29 +156,30 @@ function spawnEffect(idx, cx, cy) {
   const e = EFFECTS[idx];
   const col = e.color;
 
-  if (idx === 0) { // Peony
-    for (let i=0;i<90;i++){
-      const a=(i/90)*Math.PI*2, s=r(3,5.5);
-      const L=sl(r(55,80));
-      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s+r(-0.2,0.2)),vy:sv(Math.sin(a)*s+r(-0.2,0.2)),life:L,maxLife:L,col,size:r(2,3.5),grav:0.012,trail:[],type:'basic'});
+  if (idx === 0) { // Peony — tight perfect sphere, no trails, stars pop and fade in place
+    for (let i=0;i<120;i++){
+      const a=(i/120)*Math.PI*2, s=r(4,5);
+      const L=sl(r(60,75));
+      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col,size:r(2.5,4),grav:0.003,trail:undefined,type:'basic'});
     }
-  } else if (idx === 1) { // Chrysanthemum
-    for (let i=0;i<110;i++){
-      const a=(i/110)*Math.PI*2, s=r(3,6);
-      const L=sl(r(65,95));
-      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col,size:r(1.5,2.5),grav:0.011,trail:[],hasTail:true,tailCol:'#ff8800',type:'trail'});
+  } else if (idx === 1) { // Chrysanthemum — bright heads, long vivid colored tails, full sphere
+    for (let i=0;i<130;i++){
+      const a=(i/130)*Math.PI*2, s=r(4,7);
+      const L=sl(r(80,110));
+      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col:'#ffee00',size:r(2.5,4),grav:0.008,trail:[],type:'chrys'});
     }
-  } else if (idx === 2) { // Brocade
+  } else if (idx === 2) { // Brocade — wide umbrella, only upper half, slow-falling gold tendrils
+    for (let i=0;i<100;i++){
+      const a = r(-Math.PI*0.85, -Math.PI*0.15);
+      const s=r(3,7);
+      const L=sl(r(140,200));
+      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s),vy:sv(Math.sin(a)*s*0.6),life:L,maxLife:L,col:'#ffcc44',size:r(1.5,2.5),grav:0.018,trail:[],type:'brocade'});
+    }
+  } else if (idx === 3) { // Willow — small outward burst then stars droop straight down like curtains
     for (let i=0;i<80;i++){
-      const a=(i/80)*Math.PI*2, s=r(2,5);
-      const L=sl(r(110,160));
-      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s*1.2),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col:'#ffcc88',size:r(1.5,2.5),grav:0.022,trail:[],type:'brocade'});
-    }
-  } else if (idx === 3) { // Willow
-    for (let i=0;i<70;i++){
-      const a=(i/70)*Math.PI*2, s=r(2,4.5);
-      const L=sl(r(100,140));
-      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col:'#aaff88',size:r(1.5,2),grav:0.032,trail:[],type:'willow'});
+      const a=(i/80)*Math.PI*2, s=r(1.5,3.5);
+      const L=sl(r(150,200));
+      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s*0.4),vy:sv(Math.sin(a)*s*0.4 - 1),life:L,maxLife:L,col:'#88ff88',size:r(1.5,2),grav:0.055,trail:[],type:'willow'});
     }
   } else if (idx === 4) { // Comet — launches from bottom
     const L=sl(50);
@@ -202,11 +203,12 @@ function spawnEffect(idx, cx, cy) {
       const p={x:cx,y:cy,vx:sv(Math.cos(a)*s),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col,size:2.5,grav:0.01,trail:[],type:'fish',wriggle:r(0,Math.PI*2),wriggleDir:Math.random()<0.5?1:-1};
       particles.push(p);
     }
-  } else if (idx === 8) { // Nishiki Kamuro
-    for (let i=0;i<80;i++){
-      const a=(i/80)*Math.PI*2, s=r(3,5.5);
-      const L=sl(r(100,150));
-      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s*0.7),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col:'#ffff99',size:r(2,3),grav:0.027,trail:[],type:'kamuro'});
+  } else if (idx === 8) { // Nishiki Kamuro — dense DOWNWARD waterfall cascade from burst point
+    for (let i=0;i<140;i++){
+      const a = r(Math.PI*0.1, Math.PI*0.9);
+      const s=r(2,6);
+      const L=sl(r(130,180));
+      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s*0.5),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col:'#ffff66',size:r(1.5,2.5),grav:0.05,trail:[],type:'kamuro'});
     }
   } else if (idx === 9) { // Palm
     const arms = 7;
@@ -218,16 +220,16 @@ function spawnEffect(idx, cx, cy) {
         particles.push({x:cx,y:cy,vx:sv(Math.cos(a+da)*(s-ds)),vy:sv(Math.sin(a+da)*(s-ds)),life:L,maxLife:L,col:'#aaffcc',size:r(2.5,4),grav:0.025,trail:[],type:'palm'});
       }
     }
-  } else if (idx === 10) { // Pistil
-    for (let i=0;i<70;i++){
-      const a=(i/70)*Math.PI*2, s=r(3.5,5.5);
-      const L=sl(r(55,75));
-      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col:'#dd88ff',size:r(2,3),grav:0.012,trail:[],type:'basic'});
+  } else if (idx === 10) { // Pistil — outer ring + dense inner core, two distinct layers
+    for (let i=0;i<80;i++){
+      const a=(i/80)*Math.PI*2, s=r(5,7);
+      const L=sl(r(70,90));
+      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col:'#dd88ff',size:r(2.5,3.5),grav:0.005,trail:undefined,type:'basic'});
     }
-    for (let i=0;i<30;i++){
-      const a=(i/30)*Math.PI*2, s=r(1.5,2.5);
-      const L=sl(r(45,65));
-      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col:'#ff88ff',size:r(1.5,2.5),grav:0.012,trail:[],type:'basic'});
+    for (let i=0;i<50;i++){
+      const a=(i/50)*Math.PI*2, s=r(1,2.5);
+      const L=sl(r(60,80));
+      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col:'#ffffff',size:r(3,5),grav:0.005,trail:undefined,type:'basic'});
     }
   } else if (idx === 11) { // Strobe
     for (let i=0;i<100;i++){
@@ -313,6 +315,16 @@ function loop() {
       });
       arc(p.x,p.y,p.size);
       ctx.fillStyle=rgba(p.col,t); ctx.fill();
+    } else if (p.type === 'chrys') {
+      p.trail.push({x:p.x,y:p.y});
+      if (p.trail.length>18) p.trail.shift();
+      p.trail.forEach((pt,idx2)=>{
+        const ta=(idx2/p.trail.length)*t;
+        arc(pt.x,pt.y,p.size*0.5);
+        ctx.fillStyle=rgba('#ff6600',ta*0.7); ctx.fill();
+      });
+      arc(p.x,p.y,p.size);
+      ctx.fillStyle=rgba(p.col,Math.min(1,t*1.5)); ctx.fill();
     } else if (p.trail !== undefined) {
       p.trail.push({x:p.x,y:p.y});
       const maxT = p.type==='willow'||p.type==='kamuro'||p.type==='brocade' ? 20 : 10;
@@ -372,6 +384,18 @@ EFFECTS.forEach((e,i)=>{
 
 loop();
 launch(0);
+</script>
+
+<script>
+(function(){
+  function sendHeight(){
+    var h = document.documentElement.scrollHeight;
+    window.parent.postMessage({type:'iframeHeight',height:h},'*');
+  }
+  window.addEventListener('load', sendHeight);
+  window.addEventListener('resize', sendHeight);
+  setInterval(sendHeight, 500);
+})();
 </script>
 </body>
 </html>
