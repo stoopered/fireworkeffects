@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Firework Effects</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #07071a;
+    color: #fff;
+    font-family: 'Georgia', serif;
+    min-height: 100vh;
+  }
+  header {
+    text-align: center;
+    padding: 2rem 1rem 1rem;
+  }
+  header h1 {
+    font-size: clamp(1.6rem, 4vw, 2.8rem);
+    font-weight: normal;
+    letter-spacing: 0.12em;
+    color: #ffe88a;
+    text-transform: uppercase;
+  }
+  header p {
+    font-size: 0.85rem;
+    color: #9999bb;
+    margin-top: 0.4rem;
+    letter-spacing: 0.06em;
+    font-family: sans-serif;
+  }
+  .layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  canvas {
+    border-radius: 12px;
+    background: #05050f;
+    display: block;
+    width: 100%;
+    max-width: 640px;
+    height: 360px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    width: 100%;
+    max-width: 640px;
+  }
+  .fx-btn {
+    background: #0f0f2a;
+    border: 1px solid #2a2a55;
+    color: #ccc;
+    font-family: sans-serif;
+    font-size: 12px;
+    padding: 8px 4px;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    line-height: 1.3;
+  }
+  .fx-btn:hover { background: #1a1a3a; color: #fff; border-color: #5555aa; }
+  .fx-btn.active { background: #1e1e55; border-color: #7777ee; color: #fff; }
+  .fx-btn .dot {
+    display: block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin: 0 auto 4px;
+  }
+  .info-box {
+    width: 100%;
+    max-width: 640px;
+    background: #0c0c22;
+    border: 1px solid #1e1e44;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-family: sans-serif;
+  }
+  .info-box .name { font-size: 1rem; font-weight: 600; color: #ffe88a; margin-bottom: 4px; }
+  .info-box .desc { font-size: 0.82rem; color: #aaaacc; line-height: 1.5; }
+  footer {
+    text-align: center;
+    padding: 1.5rem;
+    font-family: sans-serif;
+    font-size: 0.75rem;
+    color: #444466;
+  }
+  @media (max-width: 480px) {
+    .grid { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Firework Effects</h1>
+  <p>Tap an effect to see it animate</p>
+</header>
+
+<div class="layout">
+  <canvas id="c" width="640" height="360"></canvas>
+  <div class="grid" id="btns"></div>
+  <div class="info-box">
+    <div class="name" id="ename">Peony</div>
+    <div class="desc" id="edesc">A spherical break of colored stars. Peony is the most commonly seen shell type.</div>
+  </div>
+</div>
+
+<footer>Created by Michael Rehkemper &bull; Co-owner of Alien Fireworks</footer>
+
+<script>
+const EFFECTS = [
+  { name:"Peony",         color:"#ff7799", dot:"#ff7799", desc:"A spherical break of colored stars — the most commonly seen shell type, with a dense round burst." },
+  { name:"Chrysanthemum", color:"#ffdd44", dot:"#ffdd44", desc:"A spherical break of colored stars, similar to a peony, but with stars that leave a visible spark trail." },
+  { name:"Brocade",       color:"#ffcc66", dot:"#ffcc66", desc:"Large number of spark-trailing stars falling slowly in a wide umbrella pattern with long golden tendrils." },
+  { name:"Willow",        color:"#88ffaa", dot:"#88ffaa", desc:"Stars burst outward then droop downward with long trailing tails — like the branches of a weeping willow tree." },
+  { name:"Comet",         color:"#66bbff", dot:"#66bbff", desc:"A type of star that leaves a long trail of sparks as it flies through the air before bursting." },
+  { name:"Crackle",       color:"#ff9966", dot:"#ff9966", desc:"Produces clusters of flashing lights accompanied by a distinct crackling sound as stars split rapidly." },
+  { name:"Glitter",       color:"#eeffbb", dot:"#eeffbb", desc:"Produces flashes of light — effects take place in the dust or trail of the firework rather than the burning material." },
+  { name:"Fish",          color:"#ffaaee", dot:"#ffaaee", desc:"Large inserts that propel themselves rapidly away from the shell burst, swimming away like fish." },
+  { name:"Nishiki Kamuro",color:"#ffffaa", dot:"#ffffaa", desc:"A dense burst named after a Japanese hairstyle for boys — leaves a large, glittery drooping trail." },
+  { name:"Palm",          color:"#aaffcc", dot:"#aaffcc", desc:"Produces long, thick streams of light that look like the fronds of a palm tree spreading outward." },
+  { name:"Pistil",        color:"#dd88ff", dot:"#dd88ff", desc:"A centre sphere of stars in a spherical burst shell which contains an outer sphere of stars around it." },
+  { name:"Strobe",        color:"#ffffff", dot:"#eeeeee", desc:"Stars flash rapidly on and off as they travel — when used with hundreds of stars, the effect looks like shimmering water." },
+];
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = 640, H = 360;
+let particles = [], raf, currentIdx = -1, relaunchTimer = null;
+
+function r(a,b){ return a + Math.random()*(b-a); }
+const SPEED=0.38, LIFE=2.8;
+function sv(v){ return v*SPEED; }
+function sl(v){ return Math.round(v*LIFE); }
+
+function hex2rgb(hex) {
+  const v = parseInt(hex.slice(1),16);
+  return [(v>>16)&255,(v>>8)&255,v&255];
+}
+function rgba(hex, a) {
+  const [r,g,b] = hex2rgb(hex);
+  return `rgba(${r},${g},${b},${a.toFixed(3)})`;
+}
+
+function spawnEffect(idx, cx, cy) {
+  particles = [];
+  const e = EFFECTS[idx];
+  const col = e.color;
+
+  if (idx === 0) { // Peony
+    for (let i=0;i<90;i++){
+      const a=(i/90)*Math.PI*2, s=r(3,5.5);
+      const L=sl(r(55,80));
+      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s+r(-0.2,0.2)),vy:sv(Math.sin(a)*s+r(-0.2,0.2)),life:L,maxLife:L,col,size:r(2,3.5),grav:0.012,trail:[],type:'basic'});
+    }
+  } else if (idx === 1) { // Chrysanthemum
+    for (let i=0;i<110;i++){
+      const a=(i/110)*Math.PI*2, s=r(3,6);
+      const L=sl(r(65,95));
+      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col,size:r(1.5,2.5),grav:0.011,trail:[],hasTail:true,tailCol:'#ff8800',type:'trail'});
+    }
+  } else if (idx === 2) { // Brocade
+    for (let i=0;i<80;i++){
+      const a=(i/80)*Math.PI*2, s=r(2,5);
+      const L=sl(r(110,160));
+      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s*1.2),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col:'#ffcc88',size:r(1.5,2.5),grav:0.022,trail:[],type:'brocade'});
+    }
+  } else if (idx === 3) { // Willow
+    for (let i=0;i<70;i++){
+      const a=(i/70)*Math.PI*2, s=r(2,4.5);
+      const L=sl(r(100,140));
+      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col:'#aaff88',size:r(1.5,2),grav:0.032,trail:[],type:'willow'});
+    }
+  } else if (idx === 4) { // Comet — launches from bottom
+    const L=sl(50);
+    particles.push({x:W/2,y:H+10,vx:sv(r(-0.5,0.5)),vy:sv(-12),life:L,maxLife:L,col:'#ffffff',size:4,grav:sv(-0.18)*SPEED,trail:[],type:'comet',explodeCol:col,explodeAt:cy});
+  } else if (idx === 5) { // Crackle
+    for (let i=0;i<60;i++){
+      const a=(i/60)*Math.PI*2, s=r(2,5);
+      const L=sl(r(20,40));
+      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col,size:r(1.5,3),grav:0.012,trail:[],type:'crackle',splitAt:sl(r(8,18)),split:false});
+    }
+  } else if (idx === 6) { // Glitter
+    for (let i=0;i<100;i++){
+      const a=(i/100)*Math.PI*2, s=r(1.5,4.5);
+      const L=sl(r(60,100));
+      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col:'#eeffcc',size:r(1,2),grav:0.01,trail:[],type:'glitter',glitterT:r(0,10)});
+    }
+  } else if (idx === 7) { // Fish
+    for (let i=0;i<20;i++){
+      const a=(i/20)*Math.PI*2, s=r(1,2);
+      const L=sl(r(80,120));
+      const p={x:cx,y:cy,vx:sv(Math.cos(a)*s),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col,size:2.5,grav:0.01,trail:[],type:'fish',wriggle:r(0,Math.PI*2),wriggleDir:Math.random()<0.5?1:-1};
+      particles.push(p);
+    }
+  } else if (idx === 8) { // Nishiki Kamuro
+    for (let i=0;i<80;i++){
+      const a=(i/80)*Math.PI*2, s=r(3,5.5);
+      const L=sl(r(100,150));
+      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s*0.7),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col:'#ffff99',size:r(2,3),grav:0.027,trail:[],type:'kamuro'});
+    }
+  } else if (idx === 9) { // Palm
+    const arms = 7;
+    for (let i=0;i<arms;i++){
+      const a=(i/arms)*Math.PI*2+r(-0.1,0.1), s=r(5,8);
+      for (let j=0;j<8;j++){
+        const da=r(-0.15,0.15), ds=r(0,1.5);
+        const L=sl(r(50,90));
+        particles.push({x:cx,y:cy,vx:sv(Math.cos(a+da)*(s-ds)),vy:sv(Math.sin(a+da)*(s-ds)),life:L,maxLife:L,col:'#aaffcc',size:r(2.5,4),grav:0.025,trail:[],type:'palm'});
+      }
+    }
+  } else if (idx === 10) { // Pistil
+    for (let i=0;i<70;i++){
+      const a=(i/70)*Math.PI*2, s=r(3.5,5.5);
+      const L=sl(r(55,75));
+      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col:'#dd88ff',size:r(2,3),grav:0.012,trail:[],type:'basic'});
+    }
+    for (let i=0;i<30;i++){
+      const a=(i/30)*Math.PI*2, s=r(1.5,2.5);
+      const L=sl(r(45,65));
+      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col:'#ff88ff',size:r(1.5,2.5),grav:0.012,trail:[],type:'basic'});
+    }
+  } else if (idx === 11) { // Strobe
+    for (let i=0;i<100;i++){
+      const a=(i/100)*Math.PI*2, s=r(3,6);
+      const L=sl(r(70,110));
+      particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col:'#ffffff',size:r(2,3.5),grav:0.01,trail:[],type:'strobe',strobeT:r(0,8)});
+    }
+  }
+}
+
+function spawnBurst(cx, cy, col, n=24) {
+  for (let i=0;i<n;i++){
+    const a=(i/n)*Math.PI*2, s=r(2,5);
+    const L=sl(r(40,60));
+    particles.push({x:cx,y:cy,vx:sv(Math.cos(a)*s),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col,size:r(1.5,3),grav:0.012,trail:[],type:'basic'});
+  }
+}
+
+function arc(x,y,rad){ const safe=Math.max(0,rad); ctx.beginPath(); ctx.arc(x,y,safe,0,Math.PI*2); }
+
+function loop() {
+  ctx.fillStyle = 'rgba(5,5,15,0.2)';
+  ctx.fillRect(0,0,W,H);
+
+  for (let i=particles.length-1;i>=0;i--) {
+    const p = particles[i];
+    p.life--;
+    const t = Math.max(0, p.life / p.maxLife);
+
+    if (p.type === 'comet') {
+      p.trail.push({x:p.x,y:p.y});
+      if (p.trail.length>20) p.trail.shift();
+      p.trail.forEach((pt,idx)=>{
+        const ta=idx/p.trail.length;
+        arc(pt.x,pt.y,p.size*ta*0.6);
+        ctx.fillStyle=`rgba(255,220,130,${ta*0.7})`; ctx.fill();
+      });
+      arc(p.x,p.y,p.size);
+      ctx.fillStyle='#fff'; ctx.fill();
+      if (p.y <= p.explodeAt) {
+        spawnBurst(p.x, p.y, p.explodeCol, 80);
+        particles.splice(i,1); continue;
+      }
+    } else if (p.type === 'strobe') {
+      p.strobeT++;
+      if (Math.floor(p.strobeT/4)%2===0) {
+        arc(p.x,p.y,p.size);
+        ctx.fillStyle=rgba('#ffffff', t*0.95); ctx.fill();
+      }
+    } else if (p.type === 'crackle') {
+      if (!p.split && p.life < p.splitAt) {
+        p.split = true;
+        for (let k=0;k<4;k++){
+          const a=k*Math.PI/2+r(-0.3,0.3), s=r(1.5,3.5);
+          const L=sl(r(15,30));
+          particles.push({x:p.x,y:p.y,vx:sv(Math.cos(a)*s),vy:sv(Math.sin(a)*s),life:L,maxLife:L,col:p.col,size:1.5,grav:0.012,trail:[],type:'basic'});
+        }
+      }
+      arc(p.x,p.y,p.size*t);
+      ctx.fillStyle=rgba(p.col,t); ctx.fill();
+    } else if (p.type === 'glitter') {
+      p.glitterT++;
+      if (Math.floor(p.glitterT/3)%3!==0) {
+        arc(p.x,p.y,p.size*t);
+        ctx.fillStyle=rgba(p.col,t*0.9); ctx.fill();
+        if (Math.random()<0.12){
+          arc(p.x+r(-4,4),p.y+r(-4,4),1);
+          ctx.fillStyle='rgba(255,255,200,0.8)'; ctx.fill();
+        }
+      }
+    } else if (p.type === 'fish') {
+      p.wriggle += 0.25;
+      const wx = Math.sin(p.wriggle)*2*p.wriggleDir;
+      p.vx += wx*0.04;
+      const speed = Math.sqrt(p.vx*p.vx+p.vy*p.vy);
+      p.vx = p.vx/speed * Math.min(speed,9);
+      p.trail.push({x:p.x,y:p.y});
+      if (p.trail.length>10) p.trail.shift();
+      p.trail.forEach((pt,idx)=>{
+        const ta=(idx/p.trail.length)*t;
+        arc(pt.x,pt.y,p.size*0.5);
+        ctx.fillStyle=rgba(p.col,ta*0.5); ctx.fill();
+      });
+      arc(p.x,p.y,p.size);
+      ctx.fillStyle=rgba(p.col,t); ctx.fill();
+    } else if (p.trail !== undefined) {
+      p.trail.push({x:p.x,y:p.y});
+      const maxT = p.type==='willow'||p.type==='kamuro'||p.type==='brocade' ? 20 : 10;
+      if (p.trail.length>maxT) p.trail.shift();
+      p.trail.forEach((pt,idx)=>{
+        const ta=(idx/p.trail.length)*t;
+        arc(pt.x,pt.y,p.size*0.4);
+        ctx.fillStyle=rgba(p.col,ta*0.45); ctx.fill();
+      });
+      if (p.type==='brocade' && Math.random()<0.07){
+        arc(p.x+r(-3,3),p.y+r(-3,3),1.2);
+        ctx.fillStyle='rgba(255,255,180,0.9)'; ctx.fill();
+      }
+      arc(p.x,p.y,p.size*(p.type==='trail'?1:0.9));
+      ctx.fillStyle=rgba(p.col,t); ctx.fill();
+    } else {
+      arc(p.x,p.y,p.size*t);
+      ctx.fillStyle=rgba(p.col,t*0.95); ctx.fill();
+    }
+
+    p.vx *= 0.997; p.vy = p.vy*0.997 + p.grav;
+    p.x += p.vx; p.y += p.vy;
+    if (p.life <= 0) particles.splice(i,1);
+  }
+
+  raf = requestAnimationFrame(loop);
+  if (particles.length === 0 && currentIdx >= 0) scheduleRelaunch();
+}
+
+let relaunching = false;
+function scheduleRelaunch() {
+  if (relaunching) return;
+  relaunching = true;
+  setTimeout(()=>{ relaunching=false; launch(currentIdx); }, 700);
+}
+
+function launch(idx) {
+  currentIdx = idx;
+  particles = [];
+  ctx.clearRect(0,0,W,H);
+  const cx = r(W*0.25, W*0.75);
+  const cy = r(H*0.15, H*0.45);
+  spawnEffect(idx, cx, cy);
+  document.querySelectorAll('.fx-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
+  document.getElementById('ename').textContent = EFFECTS[idx].name;
+  document.getElementById('edesc').textContent = EFFECTS[idx].desc;
+}
+
+const grid = document.getElementById('btns');
+EFFECTS.forEach((e,i)=>{
+  const btn = document.createElement('button');
+  btn.className = 'fx-btn';
+  btn.innerHTML = `<span class="dot" style="background:${e.dot}"></span>${e.name}`;
+  btn.onclick = ()=>{ relaunching=false; launch(i); };
+  grid.appendChild(btn);
+});
+
+loop();
+launch(0);
+</script>
+</body>
+</html>
